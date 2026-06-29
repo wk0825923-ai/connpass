@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>connpass自動投稿システム — 運営者コンソール 完全版</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    :root{--border-color:#D8E0DA;--shadow-flat:0 1px 2px rgba(17,24,39,.05)}
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%}
+    body{font-family:'Inter',system-ui,sans-serif;background:#FAFBFA;color:#111827;line-height:1.6}
+    #app{width:100%;height:100vh;display:flex;overflow:hidden}
+
+    .sidebar{width:248px;background:#F0F4F1;border-right:1px solid #DDE8DE;display:flex;flex-direction:column;flex-shrink:0;box-shadow:1px 0 0 #DDE8DE,4px 0 24px rgba(10,107,82,.05);overflow-y:auto;overflow-x:hidden}
+    .sb-logo{padding:22px 20px 12px;border-bottom:1px solid #DDE8DE;margin-bottom:4px}
+    .brand-name{font-size:14px;font-weight:700;color:#111827;display:flex;align-items:center;gap:7px}
+    .brand-sub{font-size:10px;color:#94A3B8;margin-top:4px;letter-spacing:.06em;font-weight:500;text-transform:uppercase}
+    .nav-wrap{padding:4px 10px 16px}
+    .nav-section{font-size:11px;font-weight:700;color:#94A3B8;letter-spacing:.06em;text-transform:uppercase;padding:14px 10px 4px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#64748B;margin-bottom:1px;transition:all .12s;border:none;background:none;width:100%;text-align:left;font-weight:600;position:relative}
+    .nav-item:hover{background:#F0F8F4;color:#0A6B52}
+    .nav-item.active{background:#FFFFFF;color:#0A6B52;box-shadow:var(--shadow-flat)}
+    .nav-item.done::after{content:'✓';position:absolute;right:10px;font-size:11px;color:#0A6B52;font-weight:700}
+    .nav-icon{font-size:18px;width:22px;text-align:center;flex-shrink:0}
+    .mode-switch{margin:8px 10px;display:flex;gap:3px;background:#DDE8DE;border-radius:6px;padding:3px;flex-shrink:0}
+    .mode-btn{flex:1;padding:6px 8px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:700;transition:all .12s;color:#64748B;background:transparent}
+    .mode-btn.active{background:#0A6B52;color:#FFFFFF}
+
+    .main{flex:1;overflow:auto;background:#FAFBFA;min-width:0;display:flex;flex-direction:column}
+    .page{padding:28px 32px;flex:1;display:flex;flex-direction:column}
+    .page-title{font-size:22px;font-weight:700;color:#111827;margin:0 0 8px;letter-spacing:-.02em;line-height:1.25}
+    .page-sub{font-size:14px;color:#64748B;margin:0 0 24px}
+    .eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;color:#9CA3AF;text-transform:uppercase;margin:0 0 6px}
+
+    .card{background:#FFFFFF;border-radius:6px;padding:20px;box-shadow:var(--shadow-flat);border:1px solid var(--border-color)}
+    .card-sm{background:#FFFFFF;border-radius:6px;padding:16px;box-shadow:var(--shadow-flat);border:1px solid var(--border-color)}
+
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+    .stat-card{background:#FFFFFF;border-radius:6px;padding:16px 18px;box-shadow:var(--shadow-flat);border:1px solid var(--border-color)}
+    .stat-n{font-size:28px;font-weight:700;line-height:1;letter-spacing:-.02em;margin-top:4px}
+    .stat-l{font-size:10px;color:#94A3B8;margin-top:6px;font-weight:600;text-transform:uppercase}
+    .stat-card.green .stat-n{color:#0A6B52}
+    .stat-card.amber .stat-n{color:#B45309}
+    .stat-card.red   .stat-n{color:#C2410C}
+    .stat-card.blue  .stat-n{color:#1D4ED8}
+    .stat-card.purple .stat-n{color:#4C1D95}
+
+    .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;letter-spacing:.04em}
+    .badge-green {background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7}
+    .badge-amber {background:#FFFBEB;color:#78350F;border:1px solid #FDE68A}
+    .badge-red   {background:#FFF7ED;color:#9A3412;border:1px solid #FDBA74}
+    .badge-blue  {background:#EFF6FF;color:#1E3A8A;border:1px solid #93C5FD}
+    .badge-gray  {background:#F8FAFC;color:#475569;border:1px solid #CBD5E1}
+    .badge-purple{background:#F5F3FF;color:#4C1D95;border:1px solid #C4B5FD}
+
+    .table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.5}
+    .table th{text-align:left;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.06em;padding:9px 14px 9px 16px;border-bottom:2px solid #E2E8E2;background:#F8FAF8}
+    .table td{padding:11px 14px 11px 16px;border-bottom:1px solid #EDF2ED;color:#374151;vertical-align:middle}
+    .table tr:last-child td{border-bottom:none}
+    .table tr:hover td{background:#F0FDF4}
+
+    .form-label{font-size:11px;color:#374151;margin-bottom:8px;display:block;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+    .form-input{width:100%;background:#FFFFFF;border:1.5px solid #D8E4D8;border-radius:4px;padding:10px 12px;font-size:14px;color:#111827;outline:none;transition:all .15s}
+    .form-input:focus{border-color:#0A6B52;box-shadow:0 0 0 3px rgba(10,107,82,.1)}
+    .form-input::placeholder{color:#B8C9B8}
+    .form-textarea{width:100%;background:#FFFFFF;border:1.5px solid #D8E4D8;border-radius:4px;padding:10px 12px;font-size:13px;color:#111827;outline:none;transition:all .15s;resize:vertical;font-family:inherit;line-height:1.8}
+    .form-textarea:focus{border-color:#0A6B52;box-shadow:0 0 0 3px rgba(10,107,82,.1)}
+
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+    .btn-primary{background:#0A6B52;color:#FFFFFF}
+    .btn-primary:hover{background:#085A45}
+    .btn-primary:disabled{opacity:.45;cursor:not-allowed}
+    .btn-ghost{background:#FFFFFF;color:#374151;border:1.5px solid #D8E4D8}
+    .btn-ghost:hover{background:#F6FAF6;color:#111827;border-color:#94A3B8}
+    .btn-dark{background:#111827;color:#FFFFFF}
+    .btn-dark:hover{background:#000000}
+    .btn-danger{background:#FEE2E2;color:#991B1B;border:none}
+    .btn-danger:hover{background:#FECACA}
+    .btn-sm{padding:5px 11px;font-size:12px}
+
+    .section-title{font-size:10px;font-weight:600;color:#94A3B8;margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+    .alert-banner{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:11px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:14px;color:#78350F}
+    .info-banner{background:#EFF6FF;border:1px solid #93C5FD;border-radius:8px;padding:11px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:#1E3A8A}
+
+    .toggle-wrap{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
+    .toggle-wrap input{opacity:0;width:0;height:0;position:absolute}
+    .toggle-thumb{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#D1D5DB;border-radius:22px;transition:.25s}
+    .toggle-thumb::before{position:absolute;content:'';height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+    .toggle-wrap input:checked + .toggle-thumb{background:#0A6B52}
+    .toggle-wrap input:checked + .toggle-thumb::before{transform:translateX(18px)}
+
+    .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+    .bar-label{font-size:12px;color:#374151;width:72px;flex-shrink:0;font-weight:600}
+    .bar-track{flex:1;height:8px;background:#EDF2ED;border-radius:4px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:4px;background:#0A6B52}
+    .bar-fill.blue{background:#1D4ED8}
+    .bar-fill.purple{background:#7C3AED}
+    .bar-fill.amber{background:#B45309}
+    .bar-val{font-size:12px;color:#64748B;width:48px;text-align:right;flex-shrink:0}
+
+    .avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;color:#fff}
+
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal-box{background:#FFFFFF;border-radius:12px;width:100%;max-width:520px;max-height:80vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+    .modal-header{padding:20px 24px;border-bottom:1px solid #EDF2ED;display:flex;align-items:center;justify-content:space-between}
+    .modal-body{padding:20px 24px}
+
+    .plan-card{border-radius:8px;border:2px solid #E2E8E2;padding:20px;background:#FFFFFF;transition:border-color .15s;position:relative}
+    .plan-card.featured{border-color:#0A6B52;background:#F0FDF4}
+    .plan-card-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);white-space:nowrap}
+
+    .search-box{display:flex;align-items:center;gap:8px;border:1.5px solid #D8E4D8;border-radius:4px;padding:9px 12px;background:#FFFFFF;flex:1 1 220px}
+    .search-box input{border:none;outline:none;flex:1;font-size:14px;color:#111827;background:transparent;font-family:inherit}
+    .search-box input::placeholder{color:#B8C9B8}
+
+    .post-tab{padding:7px 16px;border-radius:20px;border:1.5px solid;cursor:pointer;font-size:12px;font-weight:700;transition:all .12s}
+    .step-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+    .step-dot.done{background:#0A6B52;color:#FFFFFF}
+    .step-dot.active{background:#FFFFFF;color:#0A6B52;border:2px solid #0A6B52}
+    .step-dot.pending{background:#F1F5F1;color:#B8C9B8;border:1.5px solid #D8E4D8}
+    .event-info-bar{background:#F0F8F4;border:1.5px solid #6EE7B7;border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .tl-item{display:flex;gap:14px}
+    .tl-left{display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0}
+    .tl-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px}
+    .tl-dot.green{background:#ECFDF5;color:#0A6B52;border:2px solid #6EE7B7}
+    .tl-dot.amber{background:#FFFBEB;color:#B45309;border:2px solid #FDE68A}
+    .tl-dot.red{background:#FFF7ED;color:#C2410C;border:2px solid #FDBA74}
+    .tl-dot.gray{background:#F8FAFC;color:#94A3B8;border:2px solid #E2E8F0}
+    .tl-line{flex:1;width:2px;background:#DDE8DE;margin:4px 0}
+    .char-count{font-size:11px;color:#94A3B8;text-align:right;margin-top:4px}
+    .char-count.over{color:#C2410C;font-weight:700}
+
+    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0}
+    .spinner-dark{border-color:#D8E4D8;border-top-color:#0A6B52}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .toast{position:fixed;top:16px;right:16px;z-index:9999;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:fadeIn .2s ease}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+    @media(max-width:720px){.sidebar{width:200px}.stat-grid{grid-template-columns:repeat(2,1fr)}.page{padding:20px}}
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+var h = React.createElement;
+var useState = React.useState;
+var Icon = function(name, s) { return h('i', { className:'ti ti-'+name, 'aria-hidden':'true', style:s }); };
+
+// ── ナビゲーション定義 ─────────────────────────────────────────
+var NAV = [
+  { section:'初期機能（MVP）', items:[
+    { id:'account_setup', label:'アカウント連携・初期設定', icon:'plug-connected' },
+    { id:'dashboard',     label:'ダッシュボード',           icon:'layout-dashboard' },
+    { id:'editor',        label:'投稿テキスト編集',         icon:'edit' },
+    { id:'status',        label:'投稿ステータス管理',       icon:'list-check' },
+  ]},
+  { section:'拡張機能', items:[
+    { id:'multi_sns', label:'複数SNS連携',     icon:'share' },
+    { id:'schedule',  label:'スケジュール設定', icon:'calendar-time' },
+    { id:'analytics', label:'アナリティクス',   icon:'chart-line' },
+    { id:'team',      label:'チーム・権限管理', icon:'users-group' },
+  ]},
+  { section:'将来機能（AI）', items:[
+    { id:'ai_generate', label:'AI告知文生成',     icon:'sparkles' },
+    { id:'mention',     label:'メンション自動化', icon:'at' },
+    { id:'recommend',   label:'学習レコメンド',   icon:'bulb' },
+  ]},
+];
+
+var ADMIN_NAV = [
+  { section:'運営者コンソール', items:[
+    { id:'admin_dashboard', label:'運営ダッシュボード', icon:'chart-pie' },
+    { id:'admin_users',     label:'ユーザー管理',       icon:'users' },
+    { id:'admin_posts',     label:'投稿モニタリング',   icon:'broadcast' },
+  ]},
+  { section:'運営設定', items:[
+    { id:'admin_billing', label:'プラン・課金',   icon:'credit-card' },
+    { id:'admin_notice',  label:'お知らせ配信',   icon:'bell' },
+  ]},
+];
+
+// ── 運営者モックデータ ─────────────────────────────────────────
+var MOCK_USERS = [
+  { id:1, name:'株式会社テックスタイル', email:'pr@techstyle.jp',    plan:'Pro',  sns:['x','slack'],               events:18, posts:142, status:'active',    lastActive:'2026-06-28' },
+  { id:2, name:'合同会社ヌマヅ開発',    email:'info@numazu.dev',     plan:'Team', sns:['x','facebook','linkedin'], events:34, posts:301, status:'active',    lastActive:'2026-06-29' },
+  { id:3, name:'フリーランス 佐藤',     email:'sato@example.com',    plan:'Free', sns:['x'],                       events:3,  posts:11,  status:'trial',     lastActive:'2026-06-20' },
+  { id:4, name:'NPO こどもIT',         email:'contact@kids-it.org', plan:'Pro',  sns:['x','facebook'],            events:9,  posts:58,  status:'active',    lastActive:'2026-06-27' },
+  { id:5, name:'株式会社レガシー商会', email:'sns@legacy.co.jp',    plan:'Free', sns:[],                          events:1,  posts:0,   status:'suspended', lastActive:'2026-05-02' },
+];
+
+var MOCK_ALL_POSTS = [
+  { id:101, user:'合同会社ヌマヅ開発',    event:'Go言語LT大会',            sns:'x',        trigger:'公開時', scheduledAt:'2026-06-29 10:00', status:'posted',    error:null },
+  { id:102, user:'株式会社テックスタイル',event:'React入門もくもく会',      sns:'x',        trigger:'前日',   scheduledAt:'2026-06-29 18:00', status:'scheduled', error:null },
+  { id:103, user:'NPO こどもIT',          event:'夏休みプログラミング教室', sns:'facebook', trigger:'3日前',  scheduledAt:'2026-06-29 09:00', status:'error',     error:'連携トークンの期限切れ' },
+  { id:104, user:'合同会社ヌマヅ開発',    event:'Go言語LT大会',            sns:'slack',    trigger:'当日朝', scheduledAt:'2026-06-30 08:00', status:'scheduled', error:null },
+];
+
+var MOCK_SIGNUPS = [
+  { month:'1月', count:4 }, { month:'2月', count:7 }, { month:'3月', count:6 },
+  { month:'4月', count:11 }, { month:'5月', count:9 }, { month:'6月', count:14 },
+];
+
+var MOCK_NOTICES = [
+  { id:1, title:'APIレート制限の仕様変更のお知らせ', target:'全ユーザー', sentAt:'2026-06-01 10:00', status:'sent',  reach:5 },
+  { id:2, title:'メンテナンスのご案内（6/15 2:00〜4:00）', target:'全ユーザー', sentAt:'2026-06-10 09:00', status:'sent', reach:5 },
+  { id:3, title:'Pro・Teamユーザー向け：新機能「AI告知文生成」リリース', target:'Pro / Team', sentAt:'2026-06-20 12:00', status:'sent', reach:3 },
+];
+
+var SNS_ICONS = { x:'brand-x', facebook:'brand-facebook', linkedin:'brand-linkedin', slack:'brand-slack' };
+
+// ── 利用者向けモックデータ ────────────────────────────────────
+var MOCK_EVENT = {
+  title:    'TypeScript勉強会 Vol.12 — 型安全なAPIクライアントを作ろう',
+  date:     '2026-07-20', time:'19:00 〜 21:00',
+  location: '渋谷区道玄坂1-2-3 TECH HALL 4F',
+  capacity: 50, attending: 32,
+  url:      'https://connpass.com/event/xxxxxx/',
+  tags:     ['TypeScript','JavaScript','フロントエンド'],
+};
+var SCHEDULES = [
+  { id:'announce',   label:'公開告知', icon:'speakerphone',   timing:'【開催告知】',  schedAt:'2026-07-01 10:00' },
+  { id:'three_days', label:'3日前',    icon:'calendar-minus', timing:'【開催3日前】', schedAt:'2026-07-17 09:00' },
+  { id:'day_before', label:'前日',     icon:'calendar-event', timing:'【開催前日】',  schedAt:'2026-07-19 18:00' },
+  { id:'day_of',     label:'当日朝',   icon:'sun',            timing:'【開催当日】',  schedAt:'2026-07-20 08:00' },
+];
+function makeTemplate(ev, timing) {
+  return timing + ev.title + '\n\n' +
+    '\u{1F4C5} ' + ev.date + ' ' + ev.time + '\n' +
+    '\u{1F4CD} ' + ev.location + '\n' +
+    '\u{1F465} 定員' + ev.capacity + '名（現在' + ev.attending + '名参加）\n\n' +
+    '詳細・参加登録はこちら\u{1F447}\n' + ev.url + '\n\n' +
+    ev.tags.map(function(t){ return '#'+t; }).join(' ') + ' #connpass';
+}
+function initPosts(ev) {
+  return SCHEDULES.map(function(s, i) {
+    return {
+      id:s.id, label:s.label, icon:s.icon, schedAt:s.schedAt,
+      text:makeTemplate(ev, s.timing),
+      status: i===0?'posted':i===2?'error':'scheduled',
+      postedAt: i===0?'2026-07-01 10:02':null,
+      errorMsg: i===2?'API rate limit exceeded (429)':null,
+    };
+  });
+}
+
+// ── Login ─────────────────────────────────────────────────────
+function LoginScreen(props) {
+  var onLogin = props.onLogin;
+  var ms = useState('login'); var mode = ms[0]; var setMode = ms[1];
+  var es = useState('');      var email = es[0]; var setEmail = es[1];
+  var ps = useState('');      var pw = ps[0];    var setPw = ps[1];
+  return h('div', { style:{ width:'100%',height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#F2F5F2',padding:'20px' } },
+    h('div', { style:{ width:'100%',maxWidth:'380px',background:'#FFFFFF',borderRadius:'12px',padding:'34px 30px',boxShadow:'0 10px 40px rgba(10,107,82,.10)',border:'1px solid #E2E8E2' } },
+      h('div', { style:{ textAlign:'center',marginBottom:'24px' } },
+        h('div', { style:{ fontSize:'15px',fontWeight:700,color:'#0A6B52',display:'inline-flex',alignItems:'center',gap:'8px' } },
+          Icon('brand-x',{fontSize:'19px'}), 'connpass 自動投稿システム'),
+        h('div', { style:{ fontSize:'11px',color:'#94A3B8',marginTop:'6px',letterSpacing:'.08em',textTransform:'uppercase' } }, 'SNS Auto-Post for connpass')),
+      h('div', { style:{ display:'flex',gap:'4px',background:'#F1F5F1',padding:'4px',borderRadius:'8px',marginBottom:'22px' } },
+        ['login','signup'].map(function(m) {
+          return h('button', { key:m, onClick:function(){ setMode(m); },
+            style:{ flex:1,padding:'8px',borderRadius:'6px',border:'none',cursor:'pointer',fontSize:'13px',fontWeight:700,
+              background:mode===m?'#FFFFFF':'transparent',color:mode===m?'#0A6B52':'#94A3B8',
+              boxShadow:mode===m?'0 1px 2px rgba(0,0,0,.06)':'none',transition:'all .12s' } },
+            m==='login'?'ログイン':'新規登録');
+        })),
+      h('div', { style:{ marginBottom:'14px' } },
+        h('label', { className:'form-label' }, 'メールアドレス'),
+        h('input', { className:'form-input',type:'email',value:email,onChange:function(e){setEmail(e.target.value);},placeholder:'you@example.com' })),
+      h('div', { style:{ marginBottom:'16px' } },
+        h('label', { className:'form-label' }, 'パスワード'),
+        h('input', { className:'form-input',type:'password',value:pw,onChange:function(e){setPw(e.target.value);},placeholder:'••••••••' })),
+      h('button', { className:'btn btn-primary',style:{ width:'100%' },onClick:function(){onLogin();} }, mode==='login'?'ログイン':'登録して始める'),
+      h('div', { style:{ display:'flex',alignItems:'center',gap:'10px',margin:'16px 0',color:'#CBD5E1',fontSize:'11px' } },
+        h('div', { style:{ flex:1,height:'1px',background:'#E2E8E2' } }), 'または',
+        h('div', { style:{ flex:1,height:'1px',background:'#E2E8E2' } })),
+      h('button', { className:'btn btn-ghost',style:{ width:'100%' },onClick:function(){onLogin();} },
+        Icon('brand-github',{fontSize:'18px'}), 'GitHub で続ける'),
+      h('p', { style:{ fontSize:'11px',color:'#A8B5A8',textAlign:'center',marginTop:'16px',lineHeight:1.6 } },
+        'フロントエンドプレビュー（認証バックエンドは後日接続）')));
+}
+
+// ── 利用者ページ群（簡略版）──────────────────────────────────
+function AccountSetupPage(props) {
+  var onNavigate = props.onNavigate;
+  var xs = useState(false); var xConn = xs[0]; var setXConn = xs[1];
+  return h('div', { className:'page' },
+    h('div', { className:'eyebrow' }, '初期設定 — STEP 1'),
+    h('h1', { className:'page-title' }, 'アカウント連携・初期設定'),
+    h('p', { className:'page-sub' }, 'X（旧Twitter）アカウントを連携してください。'),
+    h('div', { className:'card',style:{ marginBottom:'16px' } },
+      h('div', { style:{ display:'flex',alignItems:'center',gap:'16px' } },
+        h('div', { style:{ width:'48px',height:'48px',borderRadius:'12px',background:'#111827',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 } },
+          Icon('brand-x',{fontSize:'24px'})),
+        h('div', { style:{ flex:1 } },
+          h('div', { style:{ display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px' } },
+            h('span', { style:{ fontSize:'15px',fontWeight:700 } }, 'X（旧Twitter）'),
+            xConn?h('span',{className:'badge badge-green'},'連携済み'):h('span',{className:'badge badge-gray'},'未連携')),
+          xConn
+            ?h('button',{className:'btn btn-ghost',onClick:function(){setXConn(false);}},Icon('unlink',{fontSize:'16px'}),'解除')
+            :h('button',{className:'btn btn-dark',onClick:function(){setXConn(true);}},Icon('brand-x',{fontSize:'16px'}),'X と連携する')))),
+    h('div', { style:{ display:'flex',justifyContent:'flex-end' } },
+      h('button', { className:'btn btn-primary',disabled:!xConn,onClick:function(){onNavigate('dashboard');} },
+        '次へ：ダッシュボード',Icon('arrow-right',{fontSize:'16px'}))));
+}
+
+function DashboardPage(props) {
+  var eventData=props.eventData; var setEventData=props.setEventData;
+  var setPosts=props.setPosts; var onNavigate=props.onNavigate;
+  var us=useState(''); var url=us[0]; var setUrl=us[1];
+  var ls=useState(false); var loading=ls[0]; var setLoading=ls[1];
+  var handleFetch=function(){
+    if(url.indexOf('connpass.com')===-1){ alert('connpass.comのURLを入力してください'); return; }
+    setLoading(true);
+    setTimeout(function(){setEventData(MOCK_EVENT);setPosts(initPosts(MOCK_EVENT));setLoading(false);},1400);
+  };
+  return h('div',{className:'page'},
+    h('div',{className:'eyebrow'},'STEP 2'),
+    h('h1',{className:'page-title'},'ダッシュボード'),
+    h('div',{className:'card',style:{marginBottom:'20px'}},
+      h('div',{className:'section-title'},'イベントURL登録'),
+      h('div',{style:{display:'flex',gap:'10px'}},
+        h('input',{className:'form-input',type:'url',value:url,onChange:function(e){setUrl(e.target.value);},placeholder:'https://connpass.com/event/xxxxxx/'}),
+        h('button',{className:'btn btn-primary',onClick:handleFetch,disabled:loading,style:{flexShrink:0}},
+          loading?h('span',{className:'spinner'}):Icon('download',{fontSize:'16px'}),loading?'取得中…':'取得'))),
+    eventData
+      ?h('div',{style:{flex:1}},
+          h('div',{style:{background:'#F0F8F4',border:'1.5px solid #6EE7B7',borderRadius:'8px',padding:'16px 20px',marginBottom:'20px'}},
+            h('div',{className:'badge badge-green',style:{marginBottom:'8px'}},'取得済み'),
+            h('div',{style:{fontSize:'16px',fontWeight:700,color:'#111827',lineHeight:1.4}},eventData.title)),
+          h('div',{style:{display:'flex',justifyContent:'flex-end'}},
+            h('button',{className:'btn btn-primary',onClick:function(){onNavigate('editor');}},
+              '次へ：テキスト編集',Icon('arrow-right',{fontSize:'16px'}))))
+      :h('div',{className:'card',style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'10px',color:'#94A3B8',padding:'48px',textAlign:'center'}},
+          Icon('calendar-event',{fontSize:'40px',color:'#D8E4D8'}),
+          h('div',{style:{fontSize:'14px',fontWeight:600}},'URLを入力してイベント情報を取得しましょう')));
+}
+
+function EditorPage(props) {
+  var eventData=props.eventData; var posts=props.posts; var setPosts=props.setPosts; var onNavigate=props.onNavigate;
+  var ai=useState(0); var activeIdx=ai[0]; var setActiveIdx=ai[1];
+  if(!eventData){return h('div',{className:'page'},h('div',{className:'alert-banner'},Icon('alert-triangle',{fontSize:'18px'}),'まず「ダッシュボード」でイベントURLを登録してください。'));}
+  var cur=posts[activeIdx]; var LIMIT=280; var cnt=cur?cur.text.length:0;
+  var updateText=function(txt){setPosts(function(prev){return prev.map(function(p,i){return i===activeIdx?Object.assign({},p,{text:txt}):p;});});};
+  var tabs=posts.map(function(p,i){
+    var active=i===activeIdx;
+    return h('button',{key:p.id,className:'post-tab',onClick:function(){setActiveIdx(i);},
+      style:{background:active?'#0A6B52':'#FFFFFF',color:active?'#FFFFFF':'#64748B',borderColor:active?'#0A6B52':'#DDE8DE'}},p.label);
+  });
+  return h('div',{className:'page'},
+    h('div',{className:'eyebrow'},'STEP 3'),
+    h('h1',{className:'page-title'},'投稿テキスト編集'),
+    h('div',{className:'event-info-bar'},Icon('calendar-event',{fontSize:'16px',color:'#0A6B52'}),h('span',{style:{fontSize:'13px',fontWeight:600,color:'#065F46'}},eventData.title)),
+    h('div',{style:{display:'flex',gap:'6px',marginBottom:'18px',flexWrap:'wrap'}},tabs),
+    cur&&h('div',{style:{flex:1,display:'flex',gap:'16px',flexWrap:'wrap',minHeight:0}},
+      h('div',{style:{flex:'1 1 300px',display:'flex',flexDirection:'column'}},
+        h('textarea',{className:'form-textarea',value:cur.text,rows:12,style:{flex:1,minHeight:'220px'},onChange:function(e){updateText(e.target.value);}}),
+        h('div',{className:'char-count'+(cnt>LIMIT?' over':'')},cnt+' / '+LIMIT+' 文字'+(cnt>LIMIT?' ⚠ 超過':''))),
+      h('div',{style:{flex:'1 1 260px'}},
+        h('label',{className:'form-label'},'Xプレビュー'),
+        h('div',{className:'card'},h('div',{style:{fontSize:'13px',whiteSpace:'pre-wrap',lineHeight:1.8,wordBreak:'break-word'}},cur.text)))),
+    h('div',{style:{display:'flex',justifyContent:'flex-end',marginTop:'18px'}},
+      h('button',{className:'btn btn-primary',onClick:function(){onNavigate('status');}},
+        '次へ：ステータス確認',Icon('arrow-right',{fontSize:'16px'}))));
+}
+
+function StatusPage(props) {
+  var eventData=props.eventData; var posts=props.posts; var setPosts=props.setPosts;
+  var pid=useState(null); var postingId=pid[0]; var setPostingId=pid[1];
+  var handlePostNow=function(id){
+    setPostingId(id);
+    setTimeout(function(){
+      setPosts(function(prev){return prev.map(function(p){return p.id===id?Object.assign({},p,{status:'posted',postedAt:'手動投稿',errorMsg:null}):p;});});
+      setPostingId(null);
+    },1600);
+  };
+  if(!eventData){return h('div',{className:'page'},h('div',{className:'alert-banner'},Icon('alert-triangle',{fontSize:'18px'}),'まず「ダッシュボード」でイベントURLを登録してください。'));}
+  var rows=posts.map(function(p){
+    var isPosting=postingId===p.id;
+    return h('tr',{key:p.id},
+      h('td',null,h('span',{style:{fontWeight:700,fontSize:'13px'}},p.label)),
+      h('td',null,h('span',{style:{fontSize:'12px'}},p.schedAt)),
+      h('td',null,p.status==='posted'?h('span',{className:'badge badge-green'},'投稿済み'):p.status==='error'?h('span',{className:'badge badge-red'},'エラー'):h('span',{className:'badge badge-amber'},'予約中')),
+      h('td',null,p.status!=='posted'&&h('button',{className:'btn btn-primary btn-sm',onClick:function(){handlePostNow(p.id);},disabled:isPosting},
+        isPosting?h('span',{className:'spinner'}):Icon('send',{fontSize:'13px'}),isPosting?'投稿中…':'今すぐ投稿')));
+  });
+  return h('div',{className:'page'},
+    h('div',{className:'eyebrow'},'投稿ステータス管理'),
+    h('h1',{className:'page-title'},'投稿ステータス管理'),
+    h('div',{className:'event-info-bar'},Icon('calendar-event',{fontSize:'16px',color:'#0A6B52'}),h('span',{style:{fontSize:'13px',fontWeight:600,color:'#065F46'}},eventData.title)),
+    h('div',{className:'card',style:{padding:0,overflow:'hidden',flex:1}},
+      h('table',{className:'table'},
+        h('thead',null,h('tr',null,h('th',null,'タイミング'),h('th',null,'予定日時'),h('th',null,'ステータス'),h('th',null,'アクション'))),
+        h('tbody',null,rows))));
+}
+
+function ComingSoonPage(props) {
+  return h('div',{className:'page'},
+    h('h1',{className:'page-title'},props.id),
+    h('div',{className:'card',style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'40px'}},
+      Icon('tool',{fontSize:'40px',color:'#D8E4D8'}),
+      h('div',{style:{fontSize:'14px',fontWeight:700,color:'#374151',marginTop:'16px'}},'利用者向けの全機能は (5).html で実装済みです')));
+}
+
+// ── 運営者: AdminDashboard ────────────────────────────────────
+function AdminDashboard() {
+  var totalUsers  = MOCK_USERS.length;
+  var activeUsers = MOCK_USERS.filter(function(u){ return u.status==='active'; }).length;
+  var trialUsers  = MOCK_USERS.filter(function(u){ return u.status==='trial'; }).length;
+  var thisMonth   = MOCK_SIGNUPS[MOCK_SIGNUPS.length-1].count;
+  var postedCount = MOCK_ALL_POSTS.filter(function(p){ return p.status==='posted'; }).length;
+  var errorCount  = MOCK_ALL_POSTS.filter(function(p){ return p.status==='error'; }).length;
+
+  var maxSignup = Math.max.apply(null, MOCK_SIGNUPS.map(function(d){ return d.count; }));
+  var signupBars = MOCK_SIGNUPS.map(function(d){
+    var barH = Math.round(d.count / maxSignup * 80);
+    return h('div',{key:d.month,style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'4px',flex:1}},
+      h('div',{style:{width:'100%',height:'80px',display:'flex',flexDirection:'column',justifyContent:'flex-end'}},
+        h('div',{style:{width:'72%',margin:'0 auto',height:barH+'px',background:d.count===maxSignup?'#0A6B52':'#D1FAE5',borderRadius:'3px 3px 0 0',position:'relative'}},
+          d.count===maxSignup?h('div',{style:{position:'absolute',top:'-18px',left:'50%',transform:'translateX(-50%)',fontSize:'9px',fontWeight:700,color:'#0A6B52',whiteSpace:'nowrap'}},'最高'):null)),
+      h('div',{style:{fontSize:'10px',color:'#374151',fontWeight:600}},d.month),
+      h('div',{style:{fontSize:'10px',color:'#0A6B52',fontWeight:700}},d.count));
+  });
+
+  var errorAlert = errorCount > 0
+    ? h('div',{style:{background:'#FFF7ED',border:'1px solid #FDBA74',borderRadius:'8px',padding:'12px 16px',marginBottom:'20px',display:'flex',alignItems:'center',gap:'10px'}},
+        Icon('alert-triangle',{fontSize:'18px',color:'#C2410C'}),
+        h('span',{style:{fontSize:'13px',color:'#9A3412',fontWeight:600}},errorCount+'件の投稿エラーが発生しています — 投稿モニタリングを確認してください'))
+    : null;
+
+  var postItems = MOCK_ALL_POSTS.map(function(p,i){
+    return h('div',{key:p.id,style:{display:'flex',alignItems:'center',gap:'10px',padding:'10px 0',borderBottom:i<MOCK_ALL_POSTS.length-1?'1px solid #EDF2ED':'none'}},
+      h('div',{style:{flex:'0 0 120px',fontSize:'12px',fontWeight:700,color:'#111827',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.user),
+      h('div',{style:{flex:1,fontSize:'12px',color:'#64748B',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.event),
+      h('div',{style:{flexShrink:0,display:'flex',alignItems:'center',gap:'4px'}},Icon(SNS_ICONS[p.sns]||'brand-x',{fontSize:'13px',color:'#64748B'})),
+      h('span',{className:'badge badge-'+(p.status==='posted'?'green':p.status==='error'?'red':'amber'),style:{flexShrink:0}},
+        p.status==='posted'?'投稿済み':p.status==='error'?'エラー':'予約中'));
+  });
+
+  var kpiGrid = h('div',{className:'stat-grid',style:{gridTemplateColumns:'repeat(3,1fr)'}},
+    h('div',{className:'stat-card green'},  h('div',{className:'eyebrow',style:{margin:0}},'総ユーザー'),   h('div',{className:'stat-n'},totalUsers), h('div',{className:'stat-l'},'テナント')),
+    h('div',{className:'stat-card green'},  h('div',{className:'eyebrow',style:{margin:0}},'アクティブ'),   h('div',{className:'stat-n'},activeUsers),h('div',{className:'stat-l'},'ユーザー')),
+    h('div',{className:'stat-card blue'},   h('div',{className:'eyebrow',style:{margin:0}},'トライアル'),   h('div',{className:'stat-n'},trialUsers), h('div',{className:'stat-l'},'ユーザー')),
+    h('div',{className:'stat-card amber'},  h('div',{className:'eyebrow',style:{margin:0}},'今月の新規登録'),h('div',{className:'stat-n'},thisMonth),  h('div',{className:'stat-l'},'件')),
+    h('div',{className:'stat-card green'},  h('div',{className:'eyebrow',style:{margin:0}},'本日の投稿'),   h('div',{className:'stat-n'},MOCK_ALL_POSTS.length),h('div',{className:'stat-l'},'件')),
+    h('div',{className:'stat-card red'},    h('div',{className:'eyebrow',style:{margin:0}},'エラー'),       h('div',{className:'stat-n'},errorCount),  h('div',{className:'stat-l'},'件')));
+
+  return h('div',{className:'page'},
+    h('div',{className:'eyebrow'},'運営者コンソール'),
+    h('h1',{className:'page-title'},'運営ダッシュボード'),
+    h('p',{className:'page-sub'},'プラットフォーム全体の状況をひと目で確認できます。'),
+    errorAlert,
+    kpiGrid,
+    h('div',{style:{display:'flex',gap:'16px',flex:1,flexWrap:'wrap',minHeight:0}},
+      h('div',{className:'card',style:{flex:'1 1 240px'}},
+        h('div',{className:'section-title'},'新規登録の推移（月次）'),
+        h('div',{style:{display:'flex',gap:'4px',alignItems:'flex-end',height:'110px'}},signupBars)),
+      h('div',{className:'card',style:{flex:'2 1 340px',display:'flex',flexDirection:'column'}},
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}},
+          h('div',{className:'section-title',style:{margin:0}},'本日の投稿状況（'+MOCK_ALL_POSTS.length+'件）'),
+          h('div',{style:{display:'flex',gap:'6px'}},
+            h('span',{className:'badge badge-amber'},MOCK_ALL_POSTS.filter(function(p){return p.status==='scheduled';}).length+' 予約中'),
+            h('span',{className:'badge badge-green'},postedCount+' 投稿済み'),
+            h('span',{className:'badge badge-red'},errorCount+' エラー'))),
+        postItems)));
+}
+
+// ── 運営者: AdminUsers ────────────────────────────────────────
+function AdminUsers() {
+  var qs=useState('');    var query=qs[0];      var setQuery=qs[1];
+  var pf=useState('all'); var planF=pf[0];      var setPlanF=pf[1];
+  var sf=useState('all'); var statusF=sf[0];    var setStatusF=sf[1];
+  var se=useState(null);  var selected=se[0];   var setSelected=se[1];
+  var sx=useState({});    var susp=sx[0];       var setSusp=sx[1];
+
+  var statusClass = { active:'badge-green', trial:'badge-blue', suspended:'badge-gray' };
+  var statusLabel = { active:'アクティブ', trial:'トライアル', suspended:'停止中' };
+
+  var filtered = MOCK_USERS.filter(function(u){
+    var q = !query||u.name.indexOf(query)>=0||u.email.indexOf(query)>=0;
+    var p = planF==='all'||u.plan===planF;
+    var s = statusF==='all'||u.status===statusF;
+    return q&&p&&s;
+  });
+
+  var toggleSusp=function(id){ setSusp(function(prev){ var n=Object.assign({},prev); if(n[id]) delete n[id]; else n[id]=true; return n; }); };
+
+  // user rows – extracted
+  var userRows = filtered.map(function(u){
+    var isSusp = susp[u.id]||u.status==='suspended';
+    var st = (susp[u.id]&&u.status!=='suspended')?'suspended':u.status;
+    return h('tr',{key:u.id},
+      h('td',null,
+        h('div',{style:{fontWeight:700,fontSize:'13px',color:'#111827'}},u.name),
+        h('div',{style:{fontSize:'11px',color:'#94A3B8'}},u.email)),
+      h('td',null,h('span',{className:'badge badge-purple'},u.plan)),
+      h('td',null,
+        h('div',{style:{display:'flex',gap:'4px'}},
+          u.sns.map(function(s){
+            return h('div',{key:s,style:{width:'22px',height:'22px',borderRadius:'4px',background:'#F1F5F1',display:'flex',alignItems:'center',justifyContent:'center'}},
+              Icon(SNS_ICONS[s]||'brand-x',{fontSize:'13px',color:'#64748B'}));
+          }),
+          u.sns.length===0?h('span',{style:{fontSize:'11px',color:'#94A3B8'}},'なし'):null)),
+      h('td',null,h('span',{style:{fontWeight:700}},u.events)),
+      h('td',null,h('span',{style:{fontWeight:700}},u.posts)),
+      h('td',null,h('span',{className:'badge '+(statusClass[st]||'badge-gray')},statusLabel[st]||st)),
+      h('td',null,h('span',{style:{fontSize:'12px'}},u.lastActive)),
+      h('td',null,
+        h('div',{style:{display:'flex',gap:'5px',flexWrap:'wrap'}},
+          h('button',{className:'btn btn-ghost btn-sm',onClick:function(){setSelected(u);}},Icon('chevron-right',{fontSize:'13px'}),'詳細'),
+          u.status!=='suspended'
+            ?h('button',{className:'btn btn-'+(isSusp?'ghost':'danger')+' btn-sm',onClick:function(){toggleSusp(u.id);}},isSusp?'再開':'停止')
+            :null)));
+  });
+
+  // modal – extracted
+  var modal = selected ? h('div',{className:'modal-overlay',onClick:function(e){if(e.target===e.currentTarget)setSelected(null);}},
+    h('div',{className:'modal-box'},
+      h('div',{className:'modal-header'},
+        h('div',null,
+          h('div',{style:{fontSize:'16px',fontWeight:700,color:'#111827'}},selected.name),
+          h('div',{style:{fontSize:'12px',color:'#64748B'}},selected.email)),
+        h('button',{className:'btn btn-ghost btn-sm',onClick:function(){setSelected(null);}},Icon('x',{fontSize:'16px'}))),
+      h('div',{className:'modal-body'},
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'20px'}},
+          h('div',{style:{background:'#F8FAF8',borderRadius:'8px',padding:'14px'}},h('div',{className:'section-title',style:{marginBottom:'6px'}},'プラン'),h('span',{className:'badge badge-purple'},selected.plan)),
+          h('div',{style:{background:'#F8FAF8',borderRadius:'8px',padding:'14px'}},h('div',{className:'section-title',style:{marginBottom:'6px'}},'ステータス'),h('span',{className:'badge '+(statusClass[selected.status]||'badge-gray')},statusLabel[selected.status]||selected.status)),
+          h('div',{style:{background:'#F8FAF8',borderRadius:'8px',padding:'14px'}},h('div',{className:'section-title',style:{marginBottom:'6px'}},'イベント数'),h('div',{style:{fontSize:'24px',fontWeight:700,color:'#0A6B52'}},selected.events)),
+          h('div',{style:{background:'#F8FAF8',borderRadius:'8px',padding:'14px'}},h('div',{className:'section-title',style:{marginBottom:'6px'}},'総投稿数'),h('div',{style:{fontSize:'24px',fontWeight:700,color:'#1D4ED8'}},selected.posts))),
+        h('div',{style:{marginBottom:'16px'}},
+          h('div',{className:'section-title'},'連携SNS'),
+          selected.sns.length>0
+            ?h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+                selected.sns.map(function(s){
+                  return h('div',{key:s,style:{display:'flex',alignItems:'center',gap:'6px',background:'#F0F8F4',border:'1px solid #6EE7B7',borderRadius:'6px',padding:'6px 12px'}},
+                    Icon(SNS_ICONS[s]||'brand-x',{fontSize:'15px',color:'#0A6B52'}),
+                    h('span',{style:{fontSize:'12px',fontWeight:600,color:'#065F46'}},s.toUpperCase()));
+                }))
+            :h('span',{style:{fontSize:'12px',color:'#94A3B8'}},'未連携')),
+        h('div',null,
+          h('div',{className:'section-title'},'最終ログイン'),
+          h('div',{style:{fontSize:'13px',color:'#374151'}},selected.lastActive))))) : null;
+
+  var filterRow = h('div',{style:{display:'flex',gap:'10px',marginBottom:'16px',flexWrap:'wrap'}},
+    h('div',{className:'search-box',style:{flex:'1 1 220px'}},
+      Icon('search',{fontSize:'16px',color:'#94A3B8'}),
+      h('input',{type:'text',value:query,onChange:function(e){setQuery(e.target.value);},placeholder:'会社名・メールで検索'})),
+    h('select',{className:'form-input',style:{flex:'0 0 130px',cursor:'pointer'},value:planF,onChange:function(e){setPlanF(e.target.value);}},
+      h('option',{value:'all'},'全プラン'),h('option',{value:'Free'},'Free'),h('option',{value:'Pro'},'Pro'),h('option',{value:'Team'},'Team')),
+    h('select',{className:'form-input',style:{flex:'0 0 150px',cursor:'pointer'},value:statusF,onChange:function(e){setStatusF(e.target.value);}},
+      h('option',{value:'all'},'全ステータス'),h('option',{value:'active'},'アクティブ'),h('option',{value:'trial'},'トライアル'),h('option',{value:'suspended'},'停止中')),
+    h('span',{style:{fontSize:'12px',color:'#94A3B8',alignSelf:'center',flexShrink:0}},filtered.length+' 件'));
+
+  return h('div',{className:'page'},
+    modal,
+    h('div',{className:'eyebrow'},'運営者コンソール'),
+    h('h1',{className:'page-title'},'ユーザー管理'),
+    h('p',{className:'page-sub'},'全テナントの状況を確認・管理します。「詳細」から個別情報を確認できます。'),
+    filterRow,
+    h('div',{className:'card',style:{padding:0,overflow:'hidden',flex:1}},
+      h('table',{className:'table'},
+        h('thead',null,h('tr',null,
+          h('th',null,'会社名'),h('th',null,'プラン'),h('th',null,'SNS'),
+          h('th',null,'イベント'),h('th',null,'投稿数'),h('th',null,'ステータス'),
+          h('th',null,'最終ログイン'),h('th',null,'操作'))),
+        h('tbody',null,userRows))));
+}
+
+// ── 運営者: AdminPosts ────────────────────────────────────────
+function AdminPosts() {
+  var lp=useState(MOCK_ALL_POSTS.map(function(p){return Object.assign({},p);}));
+  var localPosts=lp[0]; var setLocalPosts=lp[1];
+  var sf=useState('all'); var statusF=sf[0]; var setStatusF=sf[1];
+  var ts=useState(null); var toastMsg=ts[0]; var setToastMsg=ts[1];
+
+  var scheduled = localPosts.filter(function(p){return p.status==='scheduled';}).length;
+  var posted    = localPosts.filter(function(p){return p.status==='posted';}).length;
+  var errors    = localPosts.filter(function(p){return p.status==='error';}).length;
+
+  var filtered = statusF==='all'?localPosts:localPosts.filter(function(p){return p.status===statusF;});
+
+  var handleRetry=function(id){
+    setLocalPosts(function(prev){return prev.map(function(p){return p.id===id?Object.assign({},p,{status:'scheduled',error:null}):p;});});
+    setToastMsg('再試行キューに追加しました');
+    setTimeout(function(){setToastMsg(null);},2500);
+  };
+
+  var filterBtns = ['all','scheduled','posted','error'].map(function(s){
+    var labels={all:'すべて',scheduled:'予約中',posted:'投稿済み',error:'エラー'};
+    return h('button',{key:s,className:'btn btn-'+(statusF===s?'primary':'ghost')+' btn-sm',onClick:function(){setStatusF(s);}},labels[s]);
+  });
+
+  var postRows = filtered.map(function(p){
+    return h('tr',{key:p.id},
+      h('td',null,h('div',{style:{fontWeight:700,fontSize:'12px',color:'#111827'}},p.user)),
+      h('td',null,h('div',{style:{fontSize:'12px',maxWidth:'160px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.event)),
+      h('td',null,h('div',{style:{display:'flex',alignItems:'center',gap:'5px'}},Icon(SNS_ICONS[p.sns]||'brand-x',{fontSize:'13px',color:'#64748B'}),h('span',{style:{fontSize:'12px'}},p.sns))),
+      h('td',null,h('span',{style:{fontSize:'12px'}},p.trigger)),
+      h('td',null,h('span',{style:{fontSize:'12px'}},p.scheduledAt)),
+      h('td',null,h('span',{className:'badge badge-'+(p.status==='posted'?'green':p.status==='error'?'red':'amber')},p.status==='posted'?'投稿済み':p.status==='error'?'エラー':'予約中')),
+      h('td',null,
+        p.error?h('div',{style:{fontSize:'11px',color:'#C2410C',marginBottom:'4px'}},p.error):null,
+        p.status==='error'?h('button',{className:'btn btn-danger btn-sm',onClick:function(){handleRetry(p.id);}},Icon('refresh',{fontSize:'13px'}),'再試行'):null));
+  });
+
+  return h('div',{className:'page'},
+    toastMsg?h('div',{className:'toast',style:{background:'#0A6B52',color:'#fff'}},Icon('circle-check',{fontSize:'16px'}),toastMsg):null,
+    h('div',{className:'eyebrow'},'運営者コンソール'),
+    h('h1',{className:'page-title'},'投稿モニタリング'),
+    h('p',{className:'page-sub'},'全ユーザーの投稿状況を横断的に監視します。'),
+    h('div',{className:'stat-grid',style:{gridTemplateColumns:'repeat(3,1fr)'}},
+      h('div',{className:'stat-card amber'},h('div',{className:'eyebrow',style:{margin:0}},'予約中'),h('div',{className:'stat-n'},scheduled),h('div',{className:'stat-l'},'件')),
+      h('div',{className:'stat-card green'},h('div',{className:'eyebrow',style:{margin:0}},'投稿済み'),h('div',{className:'stat-n'},posted),h('div',{className:'stat-l'},'件')),
+      h('div',{className:'stat-card red'},  h('div',{className:'eyebrow',style:{margin:0}},'エラー'),h('div',{className:'stat-n'},errors),h('div',{className:'stat-l'},'件'))),
+    h('div',{style:{display:'flex',gap:'8px',alignItems:'center',marginBottom:'16px'}},
+      h('span',{style:{fontSize:'13px',color:'#374151',fontWeight:600}},'フィルタ:'),filterBtns),
+    h('div',{className:'card',style:{padding:0,overflow:'hidden',flex:1}},
+      h('table',{className:'table'},
+        h('thead',null,h('tr',null,
+          h('th',null,'ユーザー'),h('th',null,'イベント'),h('th',null,'SNS'),
+          h('th',null,'タイミング'),h('th',null,'予定日時'),h('th',null,'ステータス'),h('th',null,'エラー / 操作'))),
+        h('tbody',null,postRows))));
+}
+
+// ── 運営者: AdminBilling（Step 4）────────────────────────────
+var PLANS = [
+  {
+    id:'free', name:'Free', price:0, color:'#64748B',
+    limits:{ events:3, sns:1, ai:false, team:false },
+    features:['月3イベントまで','X（Twitter）のみ','手動投稿のみ'],
+    userCount: MOCK_USERS.filter(function(u){return u.plan==='Free';}).length,
+  },
+  {
+    id:'pro', name:'Pro', price:4800, color:'#0A6B52', featured:true,
+    limits:{ events:30, sns:3, ai:true, team:false },
+    features:['月30イベントまで','X / Facebook / LinkedIn','AI告知文生成','メンション自動化'],
+    userCount: MOCK_USERS.filter(function(u){return u.plan==='Pro';}).length,
+  },
+  {
+    id:'team', name:'Team', price:14800, color:'#4C1D95',
+    limits:{ events:-1, sns:4, ai:true, team:true },
+    features:['イベント数無制限','全SNS対応（X / FB / LI / Slack）','AI告知文生成 + 学習レコメンド','チーム・権限管理','承認ワークフロー'],
+    userCount: MOCK_USERS.filter(function(u){return u.plan==='Team';}).length,
+  },
+];
+
+function AdminBilling() {
+  var ep=useState(null); var editingPlan=ep[0]; var setEditingPlan=ep[1];
+  var ef=useState({}); var editFields=ef[0]; var setEditFields=ef[1];
+  var ts=useState(null); var toastMsg=ts[0]; var setToastMsg=ts[1];
+  var lp=useState(PLANS.map(function(p){return Object.assign({},p);}));
+  var localPlans=lp[0]; var setLocalPlans=lp[1];
+
+  var totalMRR = localPlans.reduce(function(sum,p){ return sum+p.price*p.userCount; },0);
+  var totalUsers = localPlans.reduce(function(sum,p){ return sum+p.userCount; },0);
+
+  var openEdit=function(plan){
+    setEditingPlan(plan.id);
+    setEditFields({price:plan.price});
+  };
+  var saveEdit=function(planId){
+    setLocalPlans(function(prev){
+      return prev.map(function(p){
+        return p.id===planId?Object.assign({},p,{price:Number(editFields.price)||p.price}):p;
+      });
+    });
+    setEditingPlan(null);
+    setToastMsg('プラン設定を保存しました');
+    setTimeout(function(){setToastMsg(null);},2500);
+  };
+
+  // MRR bar chart – extracted
+  var maxMRR = Math.max.apply(null, localPlans.map(function(p){ return p.price*p.userCount||1; }));
+  var mrrBars = localPlans.map(function(p){
+    var val = p.price * p.userCount;
+    return h('div',{key:p.id,className:'bar-row'},
+      h('div',{className:'bar-label'},p.name),
+      h('div',{className:'bar-track'},h('div',{className:'bar-fill'+(p.id==='team'?' purple':p.id==='free'?'':' blue'),style:{width:(val/maxMRR*100)+'%'}})),
+      h('div',{className:'bar-val'},val===0?'¥0':('¥'+val.toLocaleString())));
+  });
+
+  // User dist bar chart – extracted
+  var maxU = Math.max.apply(null, localPlans.map(function(p){ return p.userCount||1; }));
+  var userBars = localPlans.map(function(p){
+    return h('div',{key:p.id,className:'bar-row'},
+      h('div',{className:'bar-label'},p.name),
+      h('div',{className:'bar-track'},h('div',{className:'bar-fill'+(p.id==='team'?' purple':p.id==='free'?' amber':''),style:{width:(p.userCount/maxU*100)+'%'}})),
+      h('div',{className:'bar-val'},p.userCount+'名'));
+  });
+
+  // Plan cards – extracted
+  var planCards = localPlans.map(function(plan){
+    var isEditing = editingPlan===plan.id;
+    var borderColor = plan.id==='pro'?'#0A6B52':plan.id==='team'?'#7C3AED':'#D8E4D8';
+    return h('div',{key:plan.id,style:{flex:'1 1 200px',border:'2px solid '+(isEditing?'#0A6B52':borderColor),borderRadius:'10px',padding:'20px',background:plan.featured?'#F0FDF4':'#FFFFFF',position:'relative'}},
+      plan.featured?h('div',{style:{position:'absolute',top:'-11px',left:'50%',transform:'translateX(-50%)'}},h('span',{className:'badge badge-green'},'人気No.1')):null,
+      h('div',{style:{fontSize:'16px',fontWeight:700,color:'#111827',marginBottom:'4px'}},plan.name),
+      isEditing
+        ?h('div',{style:{marginBottom:'12px'}},
+            h('label',{className:'form-label',style:{marginBottom:'4px'}},'月額料金（円）'),
+            h('div',{style:{display:'flex',gap:'8px',alignItems:'center'}},
+              h('input',{className:'form-input',type:'number',value:editFields.price,onChange:function(e){setEditFields({price:e.target.value});},style:{maxWidth:'120px'}}),
+              h('button',{className:'btn btn-primary btn-sm',onClick:function(){saveEdit(plan.id);}},Icon('check',{fontSize:'14px'}),'保存'),
+              h('button',{className:'btn btn-ghost btn-sm',onClick:function(){setEditingPlan(null);}},Icon('x',{fontSize:'14px'}))))
+        :h('div',{style:{marginBottom:'12px'}},
+            h('div',{style:{fontSize:'26px',fontWeight:700,color:plan.price===0?'#94A3B8':'#111827',lineHeight:1}},
+              plan.price===0?'無料':('¥'+plan.price.toLocaleString())),
+            plan.price>0?h('div',{style:{fontSize:'11px',color:'#94A3B8'}},'/ 月'):null),
+      h('div',{style:{fontSize:'11px',color:'#94A3B8',marginBottom:'10px',fontWeight:600}},plan.userCount+'名が利用中'),
+      h('div',{style:{marginBottom:'14px'}},
+        plan.features.map(function(f,i){
+          return h('div',{key:i,style:{display:'flex',alignItems:'center',gap:'7px',fontSize:'12px',color:'#374151',marginBottom:'5px'}},
+            Icon('check',{fontSize:'12px',color:'#0A6B52'}),f);
+        })),
+      !isEditing?h('button',{className:'btn btn-ghost btn-sm',style:{width:'100%'},onClick:function(){openEdit(plan);}},Icon('edit',{fontSize:'13px'}),'料金を編集'):null);
+  });
+
+  return h('div',{className:'page'},
+    toastMsg?h('div',{className:'toast',style:{background:'#0A6B52',color:'#fff'}},Icon('circle-check',{fontSize:'16px'}),toastMsg):null,
+    h('div',{className:'eyebrow'},'運営設定'),
+    h('h1',{className:'page-title'},'プラン・課金管理'),
+    h('p',{className:'page-sub'},'各プランの機能・料金を設定します。MRRと利用者分布をひと目で確認できます。'),
+    h('div',{className:'stat-grid',style:{gridTemplateColumns:'repeat(4,1fr)'}},
+      h('div',{className:'stat-card green'},  h('div',{className:'eyebrow',style:{margin:0}},'月次売上（MRR）'),h('div',{className:'stat-n'},'¥'+Math.round(totalMRR/1000)+'k'),h('div',{className:'stat-l'},'/ 月（概算）')),
+      h('div',{className:'stat-card blue'},   h('div',{className:'eyebrow',style:{margin:0}},'有料ユーザー'),   h('div',{className:'stat-n'},localPlans.filter(function(p){return p.price>0;}).reduce(function(s,p){return s+p.userCount;},0)),h('div',{className:'stat-l'},'テナント')),
+      h('div',{className:'stat-card amber'},  h('div',{className:'eyebrow',style:{margin:0}},'無料ユーザー'),   h('div',{className:'stat-n'},localPlans.find(function(p){return p.id==='free';}).userCount),h('div',{className:'stat-l'},'テナント')),
+      h('div',{className:'stat-card purple'}, h('div',{className:'eyebrow',style:{margin:0}},'ARPU'),           h('div',{className:'stat-n'},'¥'+Math.round(totalMRR/Math.max(totalUsers,1)/100)*100),h('div',{className:'stat-l'},'/ テナント'))),
+    h('div',{className:'section-title'},'プラン設定'),
+    h('div',{style:{display:'flex',gap:'14px',flexWrap:'wrap',marginBottom:'24px'}},planCards),
+    h('div',{style:{display:'flex',gap:'16px',flex:1,flexWrap:'wrap',minHeight:0}},
+      h('div',{className:'card',style:{flex:'1 1 240px'}},
+        h('div',{className:'section-title'},'プラン別 月次売上'),mrrBars),
+      h('div',{className:'card',style:{flex:'1 1 240px'}},
+        h('div',{className:'section-title'},'プラン別 ユーザー数'),userBars),
+      h('div',{className:'card',style:{flex:'1 1 200px'}},
+        h('div',{className:'section-title'},'課金ステータス'),
+        h('div',{style:{display:'flex',flexDirection:'column',gap:'8px'}},
+          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #EDF2ED'}},
+            h('span',{style:{fontSize:'12px',color:'#374151'}},'決済方法'),h('span',{style:{fontSize:'12px',fontWeight:700}},'Stripe（後日接続）')),
+          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid #EDF2ED'}},
+            h('span',{style:{fontSize:'12px',color:'#374151'}},'請求サイクル'),h('span',{style:{fontSize:'12px',fontWeight:700}},'月次（月末締め）')),
+          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0'}},
+            h('span',{style:{fontSize:'12px',color:'#374151'}},'トライアル期間'),h('span',{style:{fontSize:'12px',fontWeight:700}},'14日間')),
+          h('div',{className:'info-banner',style:{marginTop:'12px'}},Icon('info-circle',{fontSize:'16px'}),'実際の決済はStripe連携後に有効になります')))));
+}
+
+// ── 運営者: AdminNotice（Step 5）─────────────────────────────
+function AdminNotice() {
+  var nt=useState(''); var noticeTitle=nt[0]; var setNoticeTitle=nt[1];
+  var nb=useState(''); var noticeBody=nb[0];  var setNoticeBody=nb[1];
+  var tg=useState('all'); var target=tg[0];   var setTarget=tg[1];
+  var sn=useState(false); var sending=sn[0];  var setSending=sn[1];
+  var hs=useState(MOCK_NOTICES.map(function(n){return Object.assign({},n);}));
+  var history=hs[0]; var setHistory=hs[1];
+  var ts=useState(null); var toastMsg=ts[0];  var setToastMsg=ts[1];
+
+  var LIMIT = 500;
+  var bodyLen = noticeBody.length;
+
+  var targetLabel = { all:'全ユーザー（'+MOCK_USERS.length+'名）', pro_team:'Pro / Team ユーザー', active:'アクティブユーザーのみ' };
+  var targetReach = {
+    all: MOCK_USERS.length,
+    pro_team: MOCK_USERS.filter(function(u){return u.plan==='Pro'||u.plan==='Team';}).length,
+    active: MOCK_USERS.filter(function(u){return u.status==='active';}).length,
+  };
+
+  var handleSend=function(){
+    if(!noticeTitle.trim()||!noticeBody.trim()){
+      setToastMsg('件名と本文を入力してください');
+      setTimeout(function(){setToastMsg(null);},2500);
+      return;
+    }
+    setSending(true);
+    setTimeout(function(){
+      var newNotice = {
+        id:Date.now(), title:noticeTitle, target:targetLabel[target],
+        sentAt:'2026-06-29 (送信済み)', status:'sent', reach:targetReach[target]||0,
+      };
+      setHistory(function(prev){return [newNotice].concat(prev);});
+      setNoticeTitle(''); setNoticeBody(''); setSending(false);
+      setToastMsg('お知らせを配信しました（'+newNotice.reach+'名）');
+      setTimeout(function(){setToastMsg(null);},3000);
+    },1800);
+  };
+
+  // history rows – extracted
+  var historyRows = history.map(function(n){
+    return h('tr',{key:n.id},
+      h('td',null,h('div',{style:{fontSize:'13px',fontWeight:700,color:'#111827',lineHeight:1.4}},n.title)),
+      h('td',null,h('span',{style:{fontSize:'12px'}},n.target)),
+      h('td',null,h('div',{style:{fontSize:'12px',fontWeight:700,color:'#0A6B52'}},n.reach+'名')),
+      h('td',null,h('span',{style:{fontSize:'12px',color:'#64748B'}},n.sentAt)),
+      h('td',null,h('span',{className:'badge badge-green'},'配信済み')));
+  });
+
+  // compose form – extracted
+  var composeForm = h('div',{className:'card',style:{flex:'1 1 320px'}},
+    h('div',{className:'section-title'},'新規お知らせ作成'),
+    h('div',{style:{marginBottom:'14px'}},
+      h('label',{className:'form-label'},'配信対象'),
+      h('select',{className:'form-input',style:{cursor:'pointer'},value:target,onChange:function(e){setTarget(e.target.value);}},
+        h('option',{value:'all'},'全ユーザー（'+MOCK_USERS.length+'名）'),
+        h('option',{value:'pro_team'},'Pro / Team ユーザー（'+targetReach.pro_team+'名）'),
+        h('option',{value:'active'},'アクティブユーザーのみ（'+targetReach.active+'名）'))),
+    h('div',{style:{marginBottom:'14px'}},
+      h('label',{className:'form-label'},'件名'),
+      h('input',{className:'form-input',type:'text',value:noticeTitle,onChange:function(e){setNoticeTitle(e.target.value);},placeholder:'例：メンテナンスのご案内'})),
+    h('div',{style:{marginBottom:'6px'}},
+      h('label',{className:'form-label'},'本文'),
+      h('textarea',{className:'form-textarea',value:noticeBody,rows:8,onChange:function(e){setNoticeBody(e.target.value);},placeholder:'お知らせの内容を入力してください。\n\nHTMLタグは使用できません。プレーンテキストのみ対応しています。'})),
+    h('div',{className:'char-count'+(bodyLen>LIMIT?' over':''),style:{marginBottom:'14px'}},bodyLen+' / '+LIMIT+' 文字'),
+    h('div',{style:{background:'#F8FAF8',border:'1px solid #DDE8DE',borderRadius:'6px',padding:'10px 12px',marginBottom:'16px',fontSize:'12px',color:'#64748B'}},
+      Icon('info-circle',{fontSize:'14px',color:'#94A3B8'}),
+      h('span',{style:{marginLeft:'6px'}},'配信後の取り消しはできません。内容をよく確認してから送信してください。')),
+    h('div',{style:{display:'flex',gap:'10px',alignItems:'center'}},
+      h('button',{className:'btn btn-primary',onClick:handleSend,disabled:sending||!noticeTitle.trim()||!noticeBody.trim()},
+        sending?h('span',{className:'spinner'}):Icon('send',{fontSize:'16px'}),
+        sending?'配信中…':'配信する（'+targetReach[target]+'名）'),
+      h('button',{className:'btn btn-ghost',onClick:function(){setNoticeTitle('');setNoticeBody('');}},Icon('trash',{fontSize:'15px'}),'クリア')));
+
+  return h('div',{className:'page'},
+    toastMsg?h('div',{className:'toast',style:{background:'#0A6B52',color:'#fff'}},Icon('circle-check',{fontSize:'16px'}),toastMsg):null,
+    h('div',{className:'eyebrow'},'運営設定'),
+    h('h1',{className:'page-title'},'お知らせ配信'),
+    h('p',{className:'page-sub'},'全ユーザーまたは特定プランのユーザーへお知らせを配信します。'),
+    h('div',{style:{display:'flex',gap:'16px',flex:1,flexWrap:'wrap',minHeight:0}},
+      composeForm,
+      h('div',{style:{flex:'2 1 340px',display:'flex',flexDirection:'column'}},
+        h('div',{className:'section-title'},'配信履歴（'+history.length+'件）'),
+        h('div',{className:'card',style:{padding:0,overflow:'hidden',flex:1}},
+          h('table',{className:'table'},
+            h('thead',null,h('tr',null,h('th',null,'件名'),h('th',null,'配信対象'),h('th',null,'到達数'),h('th',null,'配信日時'),h('th',null,'ステータス'))),
+            h('tbody',null,historyRows))))));
+}
+
+// ── Sidebar ───────────────────────────────────────────────────
+function Sidebar(props) {
+  var current=props.current; var onChange=props.onChange;
+  var done=props.done||[]; var navData=props.navData||NAV;
+  var mode=props.mode||'user'; var onModeChange=props.onModeChange;
+  return h('nav',{className:'sidebar'},
+    h('div',{className:'sb-logo'},
+      h('div',{className:'brand-name'},Icon('brand-x',{fontSize:'17px',color:'#0A6B52'}),'connpass自動投稿'),
+      h('div',{className:'brand-sub'},'SNS Auto-Post v0.5')),
+    h('div',{className:'mode-switch'},
+      ['admin','user'].map(function(m){
+        return h('button',{key:m,className:'mode-btn'+(mode===m?' active':''),onClick:function(){if(onModeChange)onModeChange(m);}},
+          m==='admin'?'運営者':'利用者');
+      })),
+    h('div',{className:'nav-wrap'},
+      navData.map(function(group){
+        return h('div',{key:group.section},
+          h('div',{className:'nav-section'},group.section),
+          group.items.map(function(item){
+            return h('button',{key:item.id,
+              className:'nav-item'+(current===item.id?' active':'')+(done.indexOf(item.id)>=0?' done':''),
+              onClick:function(){onChange(item.id);}},
+              h('span',{className:'nav-icon'},Icon(item.icon)),
+              item.label);
+          }));
+      })));
+}
+
+// ── App ───────────────────────────────────────────────────────
+function App() {
+  var as=useState(false);            var authed=as[0];    var setAuthed=as[1];
+  var mo=useState('admin');          var mode=mo[0];      var setMode=mo[1];
+  var ps=useState('admin_dashboard');var page=ps[0];      var setPage=ps[1];
+  var ed=useState(null);             var eventData=ed[0]; var setEventData=ed[1];
+  var po=useState([]);               var posts=po[0];     var setPosts=po[1];
+  var ds=useState([]);               var done=ds[0];      var setDone=ds[1];
+
+  var navigate=function(p){
+    setDone(function(prev){return prev.indexOf(page)>=0?prev:prev.concat([page]);});
+    setPage(p);
+  };
+  var switchMode=function(m){
+    setMode(m);
+    setPage(m==='admin'?'admin_dashboard':'account_setup');
+    setDone([]);
+  };
+
+  if(!authed){
+    return h(LoginScreen,{onLogin:function(){setAuthed(true);}});
+  }
+
+  var isAdmin=mode==='admin';
+  var navData=isAdmin?ADMIN_NAV:NAV;
+
+  var content;
+  if(isAdmin){
+    if(page==='admin_dashboard') content=h(AdminDashboard,{});
+    else if(page==='admin_users')   content=h(AdminUsers,{});
+    else if(page==='admin_posts')   content=h(AdminPosts,{});
+    else if(page==='admin_billing') content=h(AdminBilling,{});
+    else if(page==='admin_notice')  content=h(AdminNotice,{});
+    else content=h('div',{className:'page'},h('h1',{className:'page-title'},'404'));
+  } else {
+    if(page==='account_setup') content=h(AccountSetupPage,{onNavigate:navigate});
+    else if(page==='dashboard')    content=h(DashboardPage,{eventData:eventData,setEventData:setEventData,posts:posts,setPosts:setPosts,onNavigate:navigate});
+    else if(page==='editor')       content=h(EditorPage,{eventData:eventData,posts:posts,setPosts:setPosts,onNavigate:navigate});
+    else if(page==='status')       content=h(StatusPage,{eventData:eventData,posts:posts,setPosts:setPosts,onNavigate:navigate});
+    else                           content=h(ComingSoonPage,{id:page});
+  }
+
+  return h('div',{style:{display:'flex',height:'100vh',width:'100vw',overflow:'hidden'}},
+    h(Sidebar,{current:page,onChange:setPage,navData:navData,mode:mode,onModeChange:switchMode,done:done}),
+    h('main',{className:'main'},content));
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(h(App));
+</script>
+</body>
+</html>
