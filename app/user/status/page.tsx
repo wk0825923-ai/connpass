@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { MOCK_EVENT, buildInitialPosts } from '@/lib/mock-data';
+import { executePost } from '@/lib/api';
 import type { ScheduledPost } from '@/lib/types';
 import Icon from '@/components/Icon';
 
@@ -10,16 +11,29 @@ export default function StatusPage() {
   const [posting, setPosting] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const handlePostNow = (id: string) => {
+  const flashToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const handlePostNow = async (id: string) => {
+    const target = posts.find(p => p.id === id);
+    if (!target) return;
     setPosting(id);
-    setTimeout(() => {
+    const result = await executePost(target.text);
+    setPosting(null);
+
+    if (result.ok) {
       setPosts(prev => prev.map(p => p.id === id
         ? { ...p, status: 'posted', postedAt: '手動投稿', errorMsg: null }
         : p));
-      setPosting(null);
-      setToast('投稿しました');
-      setTimeout(() => setToast(null), 2500);
-    }, 1600);
+      flashToast(result.source === 'x' ? 'Xへ投稿しました' : '投稿しました（デモ）');
+    } else {
+      setPosts(prev => prev.map(p => p.id === id
+        ? { ...p, status: 'error', errorMsg: result.error ?? '投稿に失敗しました' }
+        : p));
+      flashToast('投稿に失敗しました');
+    }
   };
 
   const postedCount = posts.filter(p => p.status === 'posted').length;
