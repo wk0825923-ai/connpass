@@ -23,7 +23,7 @@ const USER_NAV = [
     { id: 'status',    label: '投稿ステータス管理',       icon: 'list-check',        href: '/user/status' },
   ]},
   { section: '拡張機能', items: [
-    { id: 'multi_sns', label: '複数SNS連携',     icon: 'share',          href: '/user/coming-soon' },
+    { id: 'multi_sns', label: '複数SNS連携',     icon: 'share',          href: '/user/sns' },
     { id: 'schedule',  label: 'スケジュール設定', icon: 'calendar-time',  href: '/user/schedule' },
     { id: 'analytics', label: 'アナリティクス',   icon: 'chart-line',     href: '/user/coming-soon' },
     { id: 'team',      label: 'チーム・権限管理', icon: 'users-group',    href: '/user/coming-soon' },
