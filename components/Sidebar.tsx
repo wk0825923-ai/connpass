@@ -24,12 +24,12 @@ const USER_NAV = [
   ]},
   { section: '拡張機能', items: [
     { id: 'multi_sns', label: '複数SNS連携',     icon: 'share',          href: '/user/coming-soon' },
-    { id: 'schedule',  label: 'スケジュール設定', icon: 'calendar-time',  href: '/user/coming-soon' },
+    { id: 'schedule',  label: 'スケジュール設定', icon: 'calendar-time',  href: '/user/schedule' },
     { id: 'analytics', label: 'アナリティクス',   icon: 'chart-line',     href: '/user/coming-soon' },
     { id: 'team',      label: 'チーム・権限管理', icon: 'users-group',    href: '/user/coming-soon' },
   ]},
   { section: '将来機能（AI）', items: [
-    { id: 'ai_generate', label: 'AI告知文生成',     icon: 'sparkles', href: '/user/coming-soon' },
+    { id: 'ai_generate', label: 'AI告知文生成',     icon: 'sparkles', href: '/user/editor' },
     { id: 'mention',     label: 'メンション自動化', icon: 'at',       href: '/user/coming-soon' },
     { id: 'recommend',   label: '学習レコメンド',   icon: 'bulb',     href: '/user/coming-soon' },
   ]},
