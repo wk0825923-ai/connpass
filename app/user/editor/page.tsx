@@ -19,11 +19,28 @@ export default function EditorPage() {
   );
   const [activeIdx, setActiveIdx] = useState(0);
 
+  const [generating, setGenerating] = useState(false);
+
   const cur = posts[activeIdx];
   const cnt = cur?.text.length ?? 0;
 
   const updateText = (text: string) =>
     setPosts(prev => prev.map((p, i) => i === activeIdx ? { ...p, text } : p));
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event }),
+      });
+      const data = await res.json();
+      if (data.text) updateText(data.text);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   return (
     <div className="page">
@@ -52,6 +69,13 @@ export default function EditorPage() {
       {cur && (
         <div style={{ flex: 1, display: 'flex', gap: 16, flexWrap: 'wrap', minHeight: 0 }}>
           <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button className="btn btn-ghost" onClick={handleGenerate} disabled={generating}
+                style={{ fontSize: 13 }}>
+                {generating ? <span className="spinner" /> : <Icon name="sparkles" style={{ fontSize: 16 }} />}
+                {generating ? '生成中…' : 'AIで生成'}
+              </button>
+            </div>
             <textarea className="form-textarea" value={cur.text} rows={12}
               style={{ flex: 1, minHeight: 220 }}
               onChange={e => updateText(e.target.value)} />

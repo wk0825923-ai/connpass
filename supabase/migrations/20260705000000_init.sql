@@ -1,10 +1,11 @@
 -- ════════════════════════════════════════════════════════════
 -- connpass プラットフォーム 初期スキーマ（Phase 0）
--- ロードマップ 0-4 準拠。users と post_logs から蓄積を開始する。
+-- ロードマップ 0-4 準拠。connpass_users と connpass_post_logs から蓄積を開始する。
+-- ※ 将来 Supabase を共用する場合に備え、テーブルは connpass_ 接頭辞で名前空間を分離。
 -- ════════════════════════════════════════════════════════════
 
 -- ── ユーザー（テナント） ─────────────────────────────────────
-create table if not exists public.users (
+create table if not exists public.connpass_users (
   id                uuid primary key default gen_random_uuid(),
   auth_id           uuid unique,                 -- supabase auth.users.id と対応
   name              text,
@@ -21,9 +22,9 @@ create table if not exists public.users (
 );
 
 -- ── 投稿ログ（Phase 1以降のデータ資産になる） ───────────────
-create table if not exists public.post_logs (
+create table if not exists public.connpass_post_logs (
   id           uuid primary key default gen_random_uuid(),
-  user_id      uuid references public.users(id) on delete cascade,
+  user_id      uuid references public.connpass_users(id) on delete cascade,
   event_id     text,                             -- connpass event id
   event_title  text,
   platform     text not null default 'x'         -- x | threads | bluesky | slack
@@ -39,26 +40,26 @@ create table if not exists public.post_logs (
   created_at   timestamptz not null default now()
 );
 
-create index if not exists post_logs_user_id_idx   on public.post_logs (user_id);
-create index if not exists post_logs_status_idx     on public.post_logs (status);
-create index if not exists post_logs_scheduled_idx  on public.post_logs (scheduled_at);
+create index if not exists connpass_post_logs_user_id_idx   on public.connpass_post_logs (user_id);
+create index if not exists connpass_post_logs_status_idx     on public.connpass_post_logs (status);
+create index if not exists connpass_post_logs_scheduled_idx  on public.connpass_post_logs (scheduled_at);
 
 -- ── RLS（行レベルセキュリティ） ─────────────────────────────
-alter table public.users     enable row level security;
-alter table public.post_logs enable row level security;
+alter table public.connpass_users     enable row level security;
+alter table public.connpass_post_logs enable row level security;
 
 -- 自分のユーザー行のみ参照/更新
-create policy "users self read"   on public.users
+create policy "connpass_users self read"   on public.connpass_users
   for select using (auth.uid() = auth_id);
-create policy "users self update" on public.users
+create policy "connpass_users self update" on public.connpass_users
   for update using (auth.uid() = auth_id);
 
 -- 自分の投稿ログのみ操作
-create policy "post_logs owner read"   on public.post_logs
+create policy "connpass_post_logs owner read"   on public.connpass_post_logs
   for select using (
-    user_id in (select id from public.users where auth_id = auth.uid())
+    user_id in (select id from public.connpass_users where auth_id = auth.uid())
   );
-create policy "post_logs owner write"  on public.post_logs
+create policy "connpass_post_logs owner write"  on public.connpass_post_logs
   for all using (
-    user_id in (select id from public.users where auth_id = auth.uid())
+    user_id in (select id from public.connpass_users where auth_id = auth.uid())
   );
