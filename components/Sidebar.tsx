@@ -30,8 +30,8 @@ const USER_NAV = [
   ]},
   { section: '将来機能（AI）', items: [
     { id: 'ai_generate', label: 'AI告知文生成',     icon: 'sparkles', href: '/user/editor' },
-    { id: 'mention',     label: 'メンション自動化', icon: 'at',       href: '/user/coming-soon' },
-    { id: 'recommend',   label: '学習レコメンド',   icon: 'bulb',     href: '/user/coming-soon' },
+    { id: 'mention',     label: 'メンション自動化', icon: 'at',       href: '/user/mention' },
+    { id: 'recommend',   label: '学習レコメンド',   icon: 'bulb',     href: '/user/recommend' },
   ]},
 ];
 
